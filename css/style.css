@@ -1,0 +1,454 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+/* Classes para controle de visibilidade das seções */
+.secao-oculta {
+    display: none; /* Oculta a seção */
+}
+
+.secao-visivel {
+    display: block; /* Garante que a seção seja exibida */
+}
+
+/* Estilos para inputs da Função Objetiva e Restrições */
+.input-grupo {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* Espaçamento entre os itens */
+    margin-bottom: 15px;
+    flex-wrap: wrap; /* Permite quebrar linha em telas menores */
+}
+
+.input-grupo label {
+    white-space: nowrap; /* Evita que o texto da label quebre */
+}
+
+.input-grupo input[type="number"] {
+    width: 80px; /* Largura menor para os coeficientes */
+    text-align: center;
+}
+
+.restricao-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    flex-wrap: wrap;
+}
+
+.restricao-item label {
+    white-space: nowrap;
+}
+
+.restricao-item input[type="number"] {
+    width: 70px; /* Largura menor para coeficientes de restrição */
+    text-align: center;
+}
+
+.restricao-item select {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.restricao-item .remover-restricao {
+    background-color: #dc3545; /* Vermelho para o botão remover */
+    padding: 8px 12px;
+    font-size: 14px;
+    margin-left: auto; /* Empurra o botão para a direita */
+}
+
+.restricao-item .remover-restricao:hover {
+    background-color: #c82333;
+}
+
+#adicionarRestricao, #gerarGrafico {
+    margin-top: 15px;
+    padding: 10px 20px;
+    font-size: 16px;
+}
+
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 1rem 0;
+    text-align: center;
+}
+
+nav {
+    background-color: #444;
+    padding: 0.5rem 0;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    text-align: center;
+}
+
+nav ul li {
+    display: inline;
+    margin: 0 15px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+main {
+    padding: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    background-color: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+section {
+    margin-bottom: 40px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+}
+
+h2, h3 {
+    color: #0056b3;
+    border-bottom: 2px solid #0056b3;
+    padding-bottom: 10px;
+    margin-top: 0;
+}
+
+footer {
+    text-align: center;
+    padding: 1rem 0;
+    background-color: #333;
+    color: #fff;
+    position: relative;
+    bottom: 0;
+    width: 100%;
+}
+
+canvas {
+    border: 1px solid #ccc;
+    display: block;
+    margin-top: 20px;
+    background-color: #f9f9f9;
+}
+
+/* Estilos para inputs e botões */
+input[type="number"], input[type="text"], textarea {
+    width: calc(100% - 16px); /* Para compensar o padding */
+    padding: 8px;
+    margin-bottom: 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box; /* Garante que padding e border não aumentem a largura */
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+/* Estilos para a configuração inicial do Simplex */
+.config-simplex {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 15px;
+}
+
+.config-simplex label {
+    font-weight: bold;
+    margin-right: 5px;
+}
+
+.config-simplex input[type="number"],
+.config-simplex select {
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    flex-grow: 1; /* Permite que cresçam para preencher espaço */
+    min-width: 80px; /* Garante uma largura mínima */
+}
+
+#gerarCamposSimplex {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: auto; /* Empurra para a direita */
+}
+
+#gerarCamposSimplex:hover {
+    background-color: #0056b3;
+}
+
+
+/* Estilos para os campos de entrada gerados dinamicamente */
+.secao-entrada-simplex {
+    margin-bottom: 25px;
+    padding: 15px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    background-color: #f8f9fa;
+}
+
+.secao-entrada-simplex h4 {
+    margin-top: 0;
+    color: #495057;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.linha-coeficientes {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.linha-coeficientes label {
+    font-weight: normal;
+    white-space: nowrap;
+}
+
+.linha-coeficientes input[type="number"] {
+    width: 60px; /* Coeficientes menores */
+    text-align: center;
+    margin-right: 5px;
+}
+
+.linha-coeficientes .operador-restricao {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+    width: auto; /* Para não ocupar 100% */
+}
+
+.rodape-simplex {
+    text-align: right;
+    margin-top: 20px;
+}
+#executarSimplex {
+    background-color: #28a745; /* Cor para o botão de executar */
+}
+#executarSimplex:hover {
+    background-color: #218838;
+}
+
+.config-simplex {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: flex; /* Mantém o flex container */
+    flex-wrap: wrap; /* Permite que os itens quebrem a linha */
+    align-items: flex-start; /* Alinha itens ao topo */
+    gap: 15px; /* Espaçamento entre os itens */
+}
+
+.config-item { /* NOVO: Estilo para cada grupo de label/input */
+    display: flex;
+    flex-direction: column; /* Coloca label em cima do input */
+    align-items: flex-start;
+    gap: 5px; /* Espaçamento entre label e input */
+    margin-bottom: 10px; /* Espaço entre os grupos */
+    flex-grow: 1; /* Permite que o item cresça */
+    min-width: 150px; /* Largura mínima para cada grupo */
+}
+
+.config-simplex label {
+    font-weight: bold;
+    margin-right: 0; /* Remove margem direita, já que a direção é coluna */
+    margin-bottom: 5px; /* Espaçamento da label para o input */
+}
+
+.config-simplex input[type="number"],
+.config-simplex select {
+    padding: 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    width: 100%; /* Ocupa a largura total do seu config-item */
+    box-sizing: border-box; /* Inclui padding e borda na largura */
+}
+
+#gerarCamposSimplex {
+    background-color: #007bff;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-left: auto; /* Empurra para a direita */
+    /* Para que o botão também quebre a linha, podemos forçar um width */
+    width: fit-content; /* Se ele não tiver um flex-grow grande */
+    align-self: flex-end; /* Alinha o botão ao final do container flex */
+}
+
+#gerarCamposSimplex:hover {
+    background-color: #0056b3;
+}
+
+
+/* Seções de Método de Transporte */
+.metodo-transporte-secao {
+    margin-bottom: 40px;
+    padding: 20px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background-color: #fcfcfc;
+}
+
+.metodo-transporte-secao h3 {
+    color: #0056b3;
+    border-bottom: 1px solid #cce5ff;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+}
+
+/* Estilos para a configuração inicial do Transporte */
+.config-transporte {
+    background-color: #e9ecef;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end; /* Alinha o botão com os campos */
+    gap: 15px;
+}
+
+.config-item-transporte {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+    flex-grow: 1;
+    min-width: 120px; /* Largura mínima para inputs de número de fontes/destinos */
+}
+
+.config-transporte label {
+    font-weight: bold;
+}
+
+.config-transporte input[type="number"] {
+    width: 100%; /* Preenche a largura do seu config-item-transporte */
+    box-sizing: border-box;
+}
+
+.config-transporte button {
+    margin-left: auto; /* Empurra o botão para a direita */
+    align-self: flex-end; /* Alinha o botão na parte inferior se os campos forem maiores */
+}
+
+
+/* Estilos para as matrizes de custo, oferta e demanda geradas pelo JS */
+.matriz-transporte-campos {
+    margin-top: 20px;
+}
+
+.matriz-transporte-campos h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #495057;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 10px;
+}
+
+.matriz-transporte-campos table {
+    width: auto; /* Permite que a tabela se ajuste ao conteúdo */
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    font-size: 0.85em; /* Fonte um pouco menor para compactar */
+}
+
+.matriz-transporte-campos th,
+.matriz-transporte-campos td {
+    border: 1px solid #ddd;
+    padding: 5px; /* Padding menor para compactar células */
+    text-align: center;
+}
+
+.matriz-transporte-campos th {
+    background-color: #f2f2f2;
+    font-weight: bold;
+}
+
+.matriz-transporte-campos td input[type="number"] {
+    width: 50px; /* Largura muito pequena para os inputs da matriz */
+    padding: 3px; /* Padding minúsculo */
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    text-align: center;
+    -moz-appearance: textfield; /* Remove setas em Firefox */
+    appearance: textfield; /* Remove setas */
+    margin: 0; /* Remove margem padrão */
+}
+/* Opcional: esconder setas em Chrome/Edge */
+.matriz-transporte-campos td input[type="number"]::-webkit-outer-spin-button,
+.matriz-transporte-campos td input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.linha-oferta-demanda {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 15px;
+}
+.linha-oferta-demanda div {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.linha-oferta-demanda input[type="number"] {
+    width: 80px; /* Largura para inputs de oferta/demanda */
+    padding: 5px;
+    text-align: center;
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.botoes-transporte {
+    margin-top: 20px;
+    text-align: right;
+}
+.botoes-transporte button {
+    margin-left: 10px;
+}

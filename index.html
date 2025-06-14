@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferramentas de Programação Linear</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header>
+        <h1>Ferramentas de Programação Linear</h1>
+    </header>
+
+    <nav>
+        <ul>
+            <li><a href="#funcao-objetiva" class="nav-item" data-target="funcao-objetiva">Função Objetiva (Gráfico 2D)</a></li>
+            <li><a href="#metodo-simplex" class="nav-item" data-target="metodo-simplex">Método Simplex</a></li>
+            <li><a href="#metodo-transporte" class="nav-item" data-target="metodo-transporte">Método de Transporte</a></li>
+        </ul>
+    </nav>
+
+    <main>
+        <section id="funcao-objetiva" class="secao-oculta">
+            <h2>Função Objetiva (Gráfico 2D)</h2>
+            <div id="containerFuncaoObjetiva">
+                <h3>Função Objetivo (Max Z = ax + by)</h3>
+                <div class="input-grupo">
+                    <label for="coefXObjetivo">Coeficiente de X:</label>
+                    <input type="number" id="coefXObjetivo" value="3">
+                    <label for="coefYObjetivo">Coeficiente de Y:</label>
+                    <input type="number" id="coefYObjetivo" value="2">
+                </div>
+                <h3>Restrições</h3>
+                <div id="containerRestricoes">
+                    <div class="restricao-item">
+                        <label>Restrição 1:</label>
+                        <input type="number" class="coef-x" value="2">x +
+                        <input type="number" class="coef-y" value="1">y
+                        <select class="tipo-restricao">
+                            <option value="le"><=</option>
+                            <option value="ge">>=</option>
+                            <option value="eq">=</option>
+                        </select>
+                        <input type="number" class="lado-direito" value="10">
+                        <button type="button" class="remover-restricao">Remover</button>
+                    </div>
+                </div>
+                <button type="button" id="adicionarRestricao">Adicionar Restrição</button>
+                <button type="button" id="gerarGrafico">Gerar Gráfico</button>
+                <canvas id="canvasFuncaoObjetiva" width="600" height="400"></canvas>
+                <div id="resultadoGrafico">
+                </div>
+            </div>
+        </section>
+
+        <section id="metodo-simplex" class="secao-oculta">
+            <h2>Método Simplex</h2>
+            <div id="containerMetodoSimplex">
+                <p>Insira os detalhes do seu problema de programação linear para resolvê-lo usando o Método Simplex.</p>
+
+                <div class="config-simplex">
+                    <div class="config-item">
+                        <label for="tipoProblemaSimplex">Tipo de Problema:</label>
+                        <select id="tipoProblemaSimplex">
+                            <option value="max">Maximização</option>
+                            <option value="min">Minimização</option>
+                        </select>
+                    </div>
+                    <div class="config-item">
+                        <label for="numVariaveisSimplex">Número de Variáveis (Xn):</label>
+                        <input type="number" id="numVariaveisSimplex" min="2" value="2">
+                    </div>
+                    <div class="config-item">
+                        <label for="numRestricoesSimplex">Número de Restrições:</label>
+                        <input type="number" id="numRestricoesSimplex" min="1" value="2">
+                    </div>
+                    <button id="gerarCamposSimplex">Gerar Campos de Entrada</button>
+                </div>
+
+                <div id="camposSimplex">
+                    </div>
+
+                <div id="saidaSimplex">
+                    </div>
+
+                <div id="tabelasSimplexPassoAPasso">
+                    <h3>Passos do Algoritmo Simplex:</h3>
+                </div>
+            </div>
+        </section>
+
+        <section id="metodo-transporte" class="secao-visivel"> <h2>Método de Transporte</h2>
+            <div id="containerMetodoTransporte">
+                <p>Utilize esta seção para resolver problemas de transporte com o Método do Canto Noroeste e o Método do Menor Custo.</p>
+
+                <div class="metodo-transporte-secao">
+                    <h3>Método do Canto Noroeste</h3>
+                    <div id="entradaCantoNoroeste">
+                        <div class="config-transporte">
+                            <div class="config-item-transporte">
+                                <label for="numFontesNoroeste">Número de Fontes:</label>
+                                <input type="number" id="numFontesNoroeste" min="1" value="2">
+                            </div>
+                            <div class="config-item-transporte">
+                                <label for="numDestinosNoroeste">Número de Destinos:</label>
+                                <input type="number" id="numDestinosNoroeste" min="1" value="2">
+                            </div>
+                            <button id="criarMatrizTransporteNoroeste">Criar Matriz</button>
+                        </div>
+                        <div class="matriz-transporte-campos" id="camposCantoNoroeste">
+                            </div>
+                    </div>
+                    <div id="saidaCantoNoroeste">
+                        </div>
+                </div>
+
+                <div class="metodo-transporte-secao">
+                    <h3>Método do Menor Custo</h3>
+                    <div id="entradaMenorCusto">
+                        <div class="config-transporte">
+                            <div class="config-item-transporte">
+                                <label for="numFontesMenorCusto">Número de Fontes:</label>
+                                <input type="number" id="numFontesMenorCusto" min="1" value="2">
+                            </div>
+                            <div class="config-item-transporte">
+                                <label for="numDestinosMenorCusto">Número de Destinos:</label>
+                                <input type="number" id="numDestinosMenorCusto" min="1" value="2">
+                            </div>
+                            <button id="criarMatrizTransporteMenorCusto">Criar Matriz</button>
+                        </div>
+                        <div class="matriz-transporte-campos" id="camposMenorCusto">
+                            </div>
+                    </div>
+                    <div id="saidaMenorCusto">
+                        </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Ferramentas de Programação Linear</p>
+    </footer>
+
+    <script src="js/funcaoObjetiva.js"></script>
+    <script src="js/metodoSimplex.js"></script>
+    <script src="js/metodoTransporte.js"></script>
+    <script src="js/navegacao.js"></script>
+</body>
+</html>
