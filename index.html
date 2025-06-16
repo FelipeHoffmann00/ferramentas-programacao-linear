@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ferramentas de Programação Linear</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
     <header>
         <h1>Ferramentas de Programação Linear</h1>
@@ -13,9 +15,11 @@
 
     <nav>
         <ul>
-            <li><a href="#funcao-objetiva" class="nav-item" data-target="funcao-objetiva">Função Objetiva (Gráfico 2D)</a></li>
+            <li><a href="#funcao-objetiva" class="nav-item" data-target="funcao-objetiva">Função Objetiva (Gráfico
+                    2D)</a></li>
             <li><a href="#metodo-simplex" class="nav-item" data-target="metodo-simplex">Método Simplex</a></li>
-            <li><a href="#metodo-transporte" class="nav-item" data-target="metodo-transporte">Método de Transporte</a></li>
+            <li><a href="#metodo-transporte" class="nav-item" data-target="metodo-transporte">Métodos de Transporte</a>
+            </li>
         </ul>
     </nav>
 
@@ -23,7 +27,14 @@
         <section id="funcao-objetiva" class="secao-oculta">
             <h2>Função Objetiva (Gráfico 2D)</h2>
             <div id="containerFuncaoObjetiva">
-                <h3>Função Objetivo (Max Z = ax + by)</h3>
+                <h3>Função Objetivo (Z)</h3>
+                <div class="input-grupo">
+                    <label for="tipoProblemaObjetiva">Tipo de Problema:</label>
+                    <select id="tipoProblemaObjetiva">
+                        <option value="max">Maximização</option>
+                        <option value="min">Minimização</option>
+                    </select>
+                </div>
                 <div class="input-grupo">
                     <label for="coefXObjetivo">Coeficiente de X:</label>
                     <input type="number" id="coefXObjetivo" value="3">
@@ -37,7 +48,7 @@
                         <input type="number" class="coef-x" value="2">x +
                         <input type="number" class="coef-y" value="1">y
                         <select class="tipo-restricao">
-                            <option value="le"><=</option>
+                            <option value="le"><= </option>
                             <option value="ge">>=</option>
                             <option value="eq">=</option>
                         </select>
@@ -56,7 +67,6 @@
         <section id="metodo-simplex" class="secao-oculta">
             <h2>Método Simplex</h2>
             <div id="containerMetodoSimplex">
-                <p>Insira os detalhes do seu problema de programação linear para resolvê-lo usando o Método Simplex.</p>
 
                 <div class="config-simplex">
                     <div class="config-item">
@@ -78,10 +88,10 @@
                 </div>
 
                 <div id="camposSimplex">
-                    </div>
+                </div>
 
                 <div id="saidaSimplex">
-                    </div>
+                </div>
 
                 <div id="tabelasSimplexPassoAPasso">
                     <h3>Passos do Algoritmo Simplex:</h3>
@@ -89,9 +99,10 @@
             </div>
         </section>
 
-        <section id="metodo-transporte" class="secao-visivel"> <h2>Método de Transporte</h2>
+        <section id="metodo-transporte" class="secao-visivel">
+            <h2>Método de Transporte</h2>
             <div id="containerMetodoTransporte">
-                <p>Utilize esta seção para resolver problemas de transporte com o Método do Canto Noroeste e o Método do Menor Custo.</p>
+                
 
                 <div class="metodo-transporte-secao">
                     <h3>Método do Canto Noroeste</h3>
@@ -108,10 +119,10 @@
                             <button id="criarMatrizTransporteNoroeste">Criar Matriz</button>
                         </div>
                         <div class="matriz-transporte-campos" id="camposCantoNoroeste">
-                            </div>
+                        </div>
                     </div>
                     <div id="saidaCantoNoroeste">
-                        </div>
+                    </div>
                 </div>
 
                 <div class="metodo-transporte-secao">
@@ -129,22 +140,23 @@
                             <button id="criarMatrizTransporteMenorCusto">Criar Matriz</button>
                         </div>
                         <div class="matriz-transporte-campos" id="camposMenorCusto">
-                            </div>
+                        </div>
                     </div>
                     <div id="saidaMenorCusto">
-                        </div>
+                    </div>
                 </div>
             </div>
         </section>
     </main>
-
+<!-- 
     <footer>
         <p>&copy; 2025 Ferramentas de Programação Linear</p>
-    </footer>
-
+    </footer> -->
+    <script src="https://unpkg.com/javascript-lp-solver/prod/solver.js"></script>
     <script src="js/funcaoObjetiva.js"></script>
     <script src="js/metodoSimplex.js"></script>
     <script src="js/metodoTransporte.js"></script>
     <script src="js/navegacao.js"></script>
 </body>
+
 </html>
