@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Exibe o resultado formatado
-        let resultadoHTML = `<h3>Resultado Final do Simplex (${tipoProblema === 'max' ? 'Maximização' : 'Minimização'} - Usando jsLPSolver):</h3>`;
+        let resultadoHTML = `<h3>Resultado Final do Simplex (${tipoProblema === 'max' ? 'Maximização' : 'Minimização'}):</h3>`;
 
         if (resultadoLib.feasible) {
             resultadoHTML += `<p>Tipo de Problema: ${tipoProblema === 'max' ? 'Maximização' : 'Minimização'}</p>`;
