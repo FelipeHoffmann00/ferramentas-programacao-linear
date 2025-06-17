@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', () => {
             for (let j = 0; j < numDestinos; j++) {
                 html += `<td><input type="number" class="custo" data-i="${i}" data-j="${j}" value="10" min="0"></td>`;
             }
-            html += `<td><input type="number" class="oferta" data-i="${i}" value="100" min="0"></td></tr>`;
+            html += `<td><input type="number" class="oferta" data-i="${i}" value="80" min="0"></td></tr>`;
         }
 
         // Linha de demanda
