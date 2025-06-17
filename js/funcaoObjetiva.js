@@ -1,59 +1,36 @@
+// Aguarda o DOM estar completamente carregado para executar o código
 document.addEventListener('DOMContentLoaded', () => {
+
+    // --- Referências DOM ---
+    // Busca os elementos principais da interface
     const canvas = document.getElementById('canvasFuncaoObjetiva');
     const ctx = canvas.getContext('2d');
     const containerRestricoes = document.getElementById('containerRestricoes');
-    const adicionarRestricaoBtn = document.getElementById('adicionarRestricao');
-    const gerarGraficoBtn = document.getElementById('gerarGrafico');
-    const resultadoGraficoDiv = document.getElementById('resultadoGrafico');
-    // NOVO: Referência ao seletor de tipo de problema
-    const tipoProblemaObjetivaSelect = document.getElementById('tipoProblemaObjetiva');
+    const btnAdd = document.getElementById('adicionarRestricao');
+    const btnGerar = document.getElementById('gerarGrafico');
+    const resultadoDiv = document.getElementById('resultadoGrafico');
+    const tipoProblemaSelect = document.getElementById('tipoProblemaObjetiva');
 
-    // Configurações iniciais do canvas
+    // --- Configurações do Canvas ---
+    const M = 50; // margem do gráfico
     canvas.width = 600;
     canvas.height = 400;
+    let escalaX = 1, escalaY = 1, maxX = 10, maxY = 10;
+    let pontosViaveis = [], pontoHover = null;
 
-    // --- Configurações do Gráfico ---
-    const MARGEM = 50; // Margem para os eixos e rótulos
-    let escalaX = 0; // Escala X em pixels por unidade
-    let escalaY = 0; // Escala Y em pixels por unidade
-    let maxX = 0;    // Valor máximo de X a ser exibido no gráfico
-    let maxY = 0;    // Valor máximo de Y a ser exibido no gráfico
+    // Conversões de coordenadas do plano cartesiano para canvas
+    const CX = x => M + x * escalaX; // coordenada X no canvas
+    const CY = y => canvas.height - M - y * escalaY; // coordenada Y no canvas (invertido)
+    const PX = px => (px - M) / escalaX; // pixel X para plano
+    const PY = py => (canvas.height - M - py) / escalaY; // pixel Y para plano
 
-    // Variáveis para o hover
-    let pontosExtremosAtuais = []; // Armazenará os pontos extremos calculados
-    let pontoHover = null; // Armazena o ponto sob o mouse
-    const RAIO_HOVER = 8; // Raio de detecção de hover em pixels
-
-    // --- Funções Auxiliares de Mapeamento de Coordenadas ---
-
-    // Converte uma coordenada X do problema para uma coordenada de pixel no canvas
-    function paraCoordenadaCanvasX(x) {
-        return MARGEM + x * escalaX;
-    }
-
-    // Converte uma coordenada Y do problema para uma coordenada de pixel no canvas
-    // O eixo Y do canvas é invertido (0 no topo, height na base), então precisamos ajustar
-    function paraCoordenadaCanvasY(y) {
-        return canvas.height - MARGEM - y * escalaY;
-    }
-
-    // Converte uma coordenada de pixel do canvas para uma coordenada X do problema
-    function paraCoordenadaProblemaX(px) {
-        return (px - MARGEM) / escalaX;
-    }
-
-    // Converte uma coordenada de pixel do canvas para uma coordenada Y do problema
-    function paraCoordenadaProblemaY(py) {
-        return (canvas.height - MARGEM - py) / escalaY;
-    }
-
-    // --- Funções para gerenciar as restrições na interface ---
-
-    function adicionarNovaRestricao() {
-        const restricaoItem = document.createElement('div');
-        restricaoItem.classList.add('restricao-item');
-        restricaoItem.innerHTML = `
-            <label>Restrição ${containerRestricoes.children.length + 1}:</label>
+    // --- Adição dinâmica de restrições ---
+    const addRestricao = () => {
+        // Cria a estrutura HTML de uma nova restrição
+        const div = document.createElement('div');
+        div.className = 'restricao-item';
+        div.innerHTML = `
+            <label>Restrição:</label>
             <input type="number" class="coef-x" value="1">x +
             <input type="number" class="coef-y" value="1">y
             <select class="tipo-restricao">
@@ -62,562 +39,254 @@ document.addEventListener('DOMContentLoaded', () => {
                 <option value="eq">=</option>
             </select>
             <input type="number" class="lado-direito" value="10">
-            <button type="button" class="remover-restricao">Remover</button>
-        `;
-        containerRestricoes.appendChild(restricaoItem);
+            <button class="remover-restricao">Remover</button>`;
+        containerRestricoes.appendChild(div);
 
-        restricaoItem.querySelector('.remover-restricao').addEventListener('click', function() {
-            restricaoItem.remove();
-            atualizarNumeracaoRestricoes();
-        });
+        // Evento para remover a restrição adicionada
+        div.querySelector('.remover-restricao').onclick = () => div.remove();
+    };
 
-        atualizarNumeracaoRestricoes();
-    }
+    btnAdd.onclick = addRestricao;
 
-    function atualizarNumeracaoRestricoes() {
-        const itensRestricao = containerRestricoes.querySelectorAll('.restricao-item');
-        itensRestricao.forEach((item, index) => {
-            item.querySelector('label').textContent = `Restrição ${index + 1}:`;
-        });
-    }
+    // --- Parte Matemática ---
 
-    adicionarRestricaoBtn.addEventListener('click', adicionarNovaRestricao);
+    // Função que verifica se um ponto satisfaz uma restrição
+    const satisfaz = (p, r) => {
+        const v = r.coefX * p.x + r.coefY * p.y, e = 1e-9;
+        return r.tipo === 'le' ? v <= r.ladoDireito + e :
+               r.tipo === 'ge' ? v >= r.ladoDireito - e :
+               Math.abs(v - r.ladoDireito) < e;
+    };
 
-    containerRestricoes.querySelectorAll('.remover-restricao').forEach(button => {
-        button.addEventListener('click', function() {
-            button.closest('.restricao-item').remove();
-            atualizarNumeracaoRestricoes();
-        });
-    });
+    // Calcula o ponto de interseção de duas restrições (duas retas)
+    const interseccao = (r1, r2) => {
+        const d = r1.coefX * r2.coefY - r2.coefX * r1.coefY;
+        if (Math.abs(d) < 1e-9) return null; // paralelas
+        const x = (r1.ladoDireito * r2.coefY - r2.ladoDireito * r1.coefY) / d;
+        const y = (r1.coefX * r2.ladoDireito - r2.coefX * r1.ladoDireito) / d;
+        return { x, y };
+    };
 
-    // --- Funções para o Gráfico ---
+    // Calcula todos os pontos viáveis da região
+    const calcularViavel = restricoes => {
+        const pts = new Set();
+        const add = p => (p.x >= 0 && p.y >= 0 && restricoes.every(r => satisfaz(p, r))) && pts.add(JSON.stringify(p));
+        add({ x: 0, y: 0 }); // adiciona origem
 
-    // Função para desenhar os eixos X e Y
-    function desenharEixos() {
-        ctx.beginPath();
-        ctx.strokeStyle = 'black';
-        ctx.lineWidth = 2; // Linha mais grossa para os eixos
-
-        // Eixo X
-        ctx.moveTo(MARGEM, canvas.height - MARGEM);
-        ctx.lineTo(canvas.width - MARGEM / 2, canvas.height - MARGEM);
-        // Seta do Eixo X
-        ctx.lineTo(canvas.width - MARGEM / 2 - 10, canvas.height - MARGEM - 5);
-        ctx.moveTo(canvas.width - MARGEM / 2, canvas.height - MARGEM);
-        ctx.lineTo(canvas.width - MARGEM / 2 - 10, canvas.height - MARGEM + 5);
-
-        // Eixo Y
-        ctx.moveTo(MARGEM, canvas.height - MARGEM);
-        ctx.lineTo(MARGEM, MARGEM / 2);
-        // Seta do Eixo Y
-        ctx.lineTo(MARGEM - 5, MARGEM / 2 + 10);
-        ctx.moveTo(MARGEM, MARGEM / 2);
-        ctx.lineTo(MARGEM + 5, MARGEM / 2 + 10);
-
-        ctx.stroke();
-
-        ctx.font = '14px Arial';
-        ctx.fillStyle = 'black';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText("X", canvas.width - MARGEM / 2, canvas.height - MARGEM + 5);
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        ctx.fillText("Y", MARGEM - 5, MARGEM / 2);
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'top';
-        ctx.fillText("0", MARGEM - 10, canvas.height - MARGEM + 5);
-
-        // Desenhar marcadores e rótulos nos eixos
-        ctx.font = '10px Arial';
-        ctx.fillStyle = '#555';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        for (let x = 1; x <= maxX; x++) {
-            const px = paraCoordenadaCanvasX(x);
-            ctx.beginPath();
-            ctx.moveTo(px, canvas.height - MARGEM - 3);
-            ctx.lineTo(px, canvas.height - MARGEM + 3);
-            ctx.stroke();
-            ctx.fillText(x.toString(), px, canvas.height - MARGEM + 5);
-        }
-
-        ctx.textAlign = 'right';
-        ctx.textBaseline = 'middle';
-        for (let y = 1; y <= maxY; y++) {
-            const py = paraCoordenadaCanvasY(y);
-            ctx.beginPath();
-            ctx.moveTo(MARGEM - 3, py);
-            ctx.lineTo(MARGEM + 3, py);
-            ctx.stroke();
-            ctx.fillText(y.toString(), MARGEM - 5, py);
-        }
-    }
-
-    // Função para calcular a escala e os limites dos eixos
-    function calcularEscalaELimites(restricoes) {
-        let tempMaxX = 0;
-        let tempMaxY = 0;
-
+        // Interseções com eixos
         restricoes.forEach(r => {
-            // Apenas consideramos restrições com lado direito positivo para cálculo de limites iniciais
-            // e coeficientes não nulos para evitar divisão por zero e linhas paralelas aos eixos em 0.
-            if (r.ladoDireito > 0) {
-                if (r.coefX !== 0) {
-                    tempMaxX = Math.max(tempMaxX, r.ladoDireito / r.coefX);
-                }
-                if (r.coefY !== 0) {
-                    tempMaxY = Math.max(tempMaxY, r.ladoDireito / r.coefY);
-                }
-            }
+            if (r.coefX !== 0) add({ x: r.ladoDireito / r.coefX, y: 0 });
+            if (r.coefY !== 0) add({ x: 0, y: r.ladoDireito / r.coefY });
         });
 
-        // Garantir um mínimo para o gráfico
-        maxX = Math.ceil(tempMaxX * 1.2) + 1;
-        maxY = Math.ceil(tempMaxY * 1.2) + 1;
-
-        if (maxX < 10) maxX = 10;
-        if (maxY < 10) maxY = 10;
-
-        escalaX = (canvas.width - 2 * MARGEM) / maxX;
-        escalaY = (canvas.height - 2 * MARGEM) / maxY;
-    }
-
-    // Função para desenhar uma única linha de restrição
-    function desenharLinhaRestricao(restricao, cor = 'blue') {
-        const { coefX, coefY, ladoDireito } = restricao;
-
-        ctx.beginPath();
-        ctx.strokeStyle = cor;
-        ctx.lineWidth = 1;
-
-        if (coefX === 0 && coefY === 0) {
-            return; // Ignora restrições degeneradas
-        }
-
-        if (coefY === 0) { // Linha vertical (x = constante)
-            const xVal = ladoDireito / coefX;
-            if (xVal >= 0) { // Desenha apenas no primeiro quadrante
-                ctx.moveTo(paraCoordenadaCanvasX(xVal), paraCoordenadaCanvasY(0));
-                ctx.lineTo(paraCoordenadaCanvasX(xVal), paraCoordenadaCanvasY(maxY));
-            }
-        }
-        else if (coefX === 0) { // Linha horizontal (y = constante)
-            const yVal = ladoDireito / coefY;
-            if (yVal >= 0) { // Desenha apenas no primeiro quadrante
-                ctx.moveTo(paraCoordenadaCanvasX(0), paraCoordenadaCanvasY(yVal));
-                ctx.lineTo(paraCoordenadaCanvasX(maxX), paraCoordenadaCanvasY(yVal));
-            }
-        }
-        else { // Linha inclinada (ax + by = c)
-            const pontosNaLinha = [];
-
-            // Ponto de intersecção com o eixo Y (x=0)
-            const y_at_x0 = ladoDireito / coefY;
-            if (y_at_x0 >= 0 && y_at_x0 <= maxY) {
-                pontosNaLinha.push({ x: 0, y: y_at_x0 });
-            }
-
-            // Ponto de intersecção com o eixo X (y=0)
-            const x_at_y0 = ladoDireito / coefX;
-            if (x_at_y0 >= 0 && x_at_y0 <= maxX) {
-                pontosNaLinha.push({ x: x_at_y0, y: 0 });
-            }
-
-            // Ponto de intersecção com a borda x = maxX
-            const y_at_maxX = (ladoDireito - coefX * maxX) / coefY;
-            if (y_at_maxX >= 0 && y_at_maxX <= maxY) {
-                pontosNaLinha.push({ x: maxX, y: y_at_maxX });
-            }
-
-            // Ponto de intersecção com a borda y = maxY
-            const x_at_maxY = (ladoDireito - coefY * maxY) / coefX;
-            if (x_at_maxY >= 0 && x_at_maxY <= maxX) {
-                pontosNaLinha.push({ x: x_at_maxY, y: maxY });
-            }
-
-            // Filtrar pontos que estão fora dos limites e ordenar para desenhar a linha corretamente
-            const pontosValidos = pontosNaLinha.filter(p => p.x >= -1e-9 && p.y >= -1e-9);
-
-            if (pontosValidos.length > 1) {
-                // Ordena os pontos para garantir que a linha seja desenhada corretamente
-                pontosValidos.sort((p1, p2) => {
-                    if (p1.x !== p2.x) return p1.x - p2.x;
-                    return p1.y - p2.y;
-                });
-                
-                ctx.moveTo(paraCoordenadaCanvasX(pontosValidos[0].x), paraCoordenadaCanvasY(pontosValidos[0].y));
-                ctx.lineTo(paraCoordenadaCanvasX(pontosValidos[pontosValidos.length - 1].x), paraCoordenadaCanvasY(pontosValidos[pontosValidos.length - 1].y));
-            }
-        }
-        ctx.stroke();
-    }
-
-    // Verifica se um ponto (x,y) satisfaz uma dada restrição
-    function pontoSatisfazRestricao(ponto, restricao) {
-        const { x, y } = ponto;
-        const { coefX, coefY, tipo, ladoDireito } = restricao;
-        const valorCalculado = coefX * x + coefY * y;
-
-        // Usamos uma pequena tolerância para comparações de ponto flutuante
-        const epsilon = 1e-9;
-
-        switch (tipo) {
-            case 'le': // <=
-                return valorCalculado <= ladoDireito + epsilon;
-            case 'ge': // >=
-                return valorCalculado >= ladoDireito - epsilon;
-            case 'eq': // =
-                return Math.abs(valorCalculado - ladoDireito) < epsilon;
-            default:
-                return false;
-        }
-    }
-
-    // Encontra a intersecção de duas linhas (restrições)
-    function encontrarInterseccao(restricao1, restricao2) {
-        const { coefX: a1, coefY: b1, ladoDireito: c1 } = restricao1;
-        const { coefX: a2, coefY: b2, ladoDireito: c2 } = restricao2;
-
-        const determinante = a1 * b2 - a2 * b1;
-
-        if (Math.abs(determinante) < 1e-9) { // Linhas paralelas ou coincidentes
-            return null;
-        }
-
-        const x = (c1 * b2 - c2 * b1) / determinante;
-        const y = (a1 * c2 - a2 * c1) / determinante;
-
-        return { x: x, y: y };
-    }
-
-    // Função principal para calcular pontos extremos e sombrear a região viável
-    function calcularERegiaoViável(restricoes) {
-        const pontosExtremos = new Set();
-
-        // Adicionar o ponto (0,0) como um possível ponto extremo se for viável
-        const origem = { x: 0, y: 0 };
-        if (restricoes.every(r => pontoSatisfazRestricao(origem, r))) {
-            pontosExtremos.add(JSON.stringify(origem));
-        }
-
-        // Adicionar intersecções com os eixos X e Y
-        restricoes.forEach(r => {
-            // Intersecção com eixo X (y=0)
-            if (r.coefX !== 0) {
-                const x = r.ladoDireito / r.coefX;
-                const ponto = { x: x, y: 0 };
-                // Verifica se o ponto está no primeiro quadrante e satisfaz todas as restrições
-                if (x >= -1e-9 && restricoes.every(res => pontoSatisfazRestricao(ponto, res))) {
-                    pontosExtremos.add(JSON.stringify(ponto));
-                }
-            }
-            // Intersecção com eixo Y (x=0)
-            if (r.coefY !== 0) {
-                const y = r.ladoDireito / r.coefY;
-                const ponto = { x: 0, y: y };
-                // Verifica se o ponto está no primeiro quadrante e satisfaz todas as restrições
-                if (y >= -1e-9 && restricoes.every(res => pontoSatisfazRestricao(ponto, res))) {
-                    pontosExtremos.add(JSON.stringify(ponto));
-                }
-            }
-        });
-
-        // Adicionar intersecções entre pares de restrições
+        // Interseção entre restrições
         for (let i = 0; i < restricoes.length; i++) {
             for (let j = i + 1; j < restricoes.length; j++) {
-                const pontoInterseccao = encontrarInterseccao(restricoes[i], restricoes[j]);
-
-                if (pontoInterseccao) {
-                    // Verifica se o ponto de intersecção está no primeiro quadrante
-                    // e se satisfaz TODAS as restrições
-                    if (pontoInterseccao.x >= -1e-9 && pontoInterseccao.y >= -1e-9 &&
-                        restricoes.every(r => pontoSatisfazRestricao(pontoInterseccao, r))) {
-                        pontosExtremos.add(JSON.stringify(pontoInterseccao));
-                    }
-                }
+                const p = interseccao(restricoes[i], restricoes[j]);
+                if (p) add(p);
             }
         }
+        return [...pts].map(JSON.parse);
+    };
 
-        const pontosFinais = Array.from(pontosExtremos).map(pStr => JSON.parse(pStr));
+    // Ordena os pontos para formar o polígono viável (ordenação angular)
+    const ordenarPoligono = pts => {
+        const c = pts.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+        c.x /= pts.length; c.y /= pts.length;
+        return pts.sort((a, b) => Math.atan2(a.y - c.y, a.x - c.x) - Math.atan2(b.y - c.y, b.x - c.x));
+    };
 
-        // Filtrar pontos que são numericamente muito próximos (duplicatas)
-        const pontosUnicos = [];
-        pontosFinais.forEach(p1 => {
-            let isUnique = true;
-            for (let i = 0; i < pontosUnicos.length; i++) {
-                const p2 = pontosUnicos[i];
-                if (Math.abs(p1.x - p2.x) < 1e-6 && Math.abs(p1.y - p2.y) < 1e-6) {
-                    isUnique = false;
-                    break;
-                }
-            }
-            if (isUnique) {
-                pontosUnicos.push(p1);
+    // Encontra a solução ótima com base na função objetivo
+    const solucaoOtima = (pts, cx, cy, tipo) => {
+        if (pts.length === 0) return { mensagem: 'Sem região viável' };
+        let melhor = (tipo === 'max') ? -Infinity : Infinity, ponto = null;
+        pts.forEach(p => {
+            const z = cx * p.x + cy * p.y;
+            if ((tipo === 'max' && z > melhor) || (tipo === 'min' && z < melhor)) {
+                melhor = z; ponto = p;
             }
         });
+        return { ponto, mensagem: `Z = ${melhor.toFixed(2)} em X = ${ponto.x.toFixed(2)}, Y = ${ponto.y.toFixed(2)}` };
+    };
 
-        // Ordenar os pontos para formar um polígono convexo (necessário para sombreamento)
-        // Isso é feito calculando o centróide e ordenando os pontos pelo ângulo polar em relação a ele.
-        if (pontosUnicos.length > 0) {
-            const centroide = pontosUnicos.reduce((acc, p) => ({x: acc.x + p.x, y: acc.y + p.y}), {x: 0, y: 0});
-            centroide.x /= pontosUnicos.length;
-            centroide.y /= pontosUnicos.length;
+    // --- Parte Gráfica ---
 
-            pontosUnicos.sort((a, b) => {
-                const angleA = Math.atan2(a.y - centroide.y, a.x - centroide.x);
-                const angleB = Math.atan2(b.y - centroide.y, b.x - centroide.x);
-                if (angleA !== angleB) return angleA - angleB;
-                // Para desempate, o ponto mais próximo do centróide vem primeiro
-                return (a.x - centroide.x)**2 + (a.y - centroide.y)**2 - ((b.x - centroide.x)**2 + (b.y - centroide.y)**2);
-            });
-        }
+    // Função principal de desenho
+    const desenhar = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const cxObj = parseFloat(document.getElementById('coefXObjetivo').value);
+        const cyObj = parseFloat(document.getElementById('coefYObjetivo').value);
+        const tipo = tipoProblemaSelect.value;
 
-        // Armazena os pontos extremos para uso no evento de hover
-        pontosExtremosAtuais = pontosUnicos;
+        // Coleta as restrições da interface
+        const restricoes = [
+            { coefX: 1, coefY: 0, tipo: 'ge', ladoDireito: 0 },
+            { coefX: 0, coefY: 1, tipo: 'ge', ladoDireito: 0 },
+            ...[...containerRestricoes.querySelectorAll('.restricao-item')].map(div => ({
+                coefX: parseFloat(div.querySelector('.coef-x').value),
+                coefY: parseFloat(div.querySelector('.coef-y').value),
+                tipo: div.querySelector('.tipo-restricao').value,
+                ladoDireito: parseFloat(div.querySelector('.lado-direito').value)
+            }))
+        ];
 
-        return pontosUnicos;
-    }
+        // Calcula escalas de desenho
+        maxX = maxY = Math.max(...restricoes.map(r => r.ladoDireito || 10), 10);
+        escalaX = (canvas.width - 2 * M) / (maxX * 1.2);
+        escalaY = (canvas.height - 2 * M) / (maxY * 1.2);
 
-    // Função para sombrear a região viável
-    function sombrearRegiaoViável(pontosViáveis) {
-        if (pontosViáveis.length < 3) { // Uma região viável deve ter pelo menos 3 pontos (um polígono)
-            // console.warn("Não há pontos suficientes para formar uma região viável para sombreamento.");
-            return;
-        }
-
-        ctx.beginPath();
-        ctx.fillStyle = 'rgba(0, 123, 255, 0.2)'; // Cor azul clara com transparência
-
-        ctx.moveTo(paraCoordenadaCanvasX(pontosViáveis[0].x), paraCoordenadaCanvasY(pontosViáveis[0].y));
-
-        for (let i = 1; i < pontosViáveis.length; i++) {
-            ctx.lineTo(paraCoordenadaCanvasX(pontosViáveis[i].x), paraCoordenadaCanvasY(pontosViáveis[i].y));
-        }
-
-        ctx.closePath(); // Fecha o caminho para formar o polígono
-        ctx.fill(); // Preenche o polígono
-    }
-
-    // Desenha os pontos extremos
-    function desenharPontosExtremos(pontos) {
-        ctx.fillStyle = 'black';
-        ctx.font = '10px Arial';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-
-        pontos.forEach(p => {
-            const px = paraCoordenadaCanvasX(p.x);
-            const py = paraCoordenadaCanvasY(p.y);
-            ctx.beginPath();
-            // Desenha um círculo no ponto, um pouco maior para facilitar o hover
-            ctx.arc(px, py, RAIO_HOVER / 2, 0, 2 * Math.PI);
-            ctx.fill();
-        });
-    }
-
-    // Desenha o tooltip de hover
-    function desenharTooltip(ponto, coefXObj, coefYObj) {
-        if (!ponto) return;
-
-        const px = paraCoordenadaCanvasX(ponto.x);
-        const py = paraCoordenadaCanvasY(ponto.y);
-        const zValue = (coefXObj * ponto.x + coefYObj * ponto.y).toFixed(2);
-        const text = `(X: ${ponto.x.toFixed(2)}, Y: ${ponto.y.toFixed(2)}) Z: ${zValue}`;
-
-        ctx.font = '12px Arial';
-        ctx.fillStyle = '#333';
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'bottom';
-
-        // Desenha um fundo para o tooltip
-        const textMetrics = ctx.measureText(text);
-        const textWidth = textMetrics.width;
-        const textHeight = 16; // Aproximado
-
-        // Posição do tooltip (ajustar para não sair da tela)
-        let tooltipX = px + RAIO_HOVER;
-        let tooltipY = py - RAIO_HOVER;
-
-        if (tooltipX + textWidth + 10 > canvas.width) {
-            tooltipX = px - RAIO_HOVER - textWidth;
-            ctx.textAlign = 'right';
-        }
-        if (tooltipY - textHeight - 10 < 0) {
-            tooltipY = py + RAIO_HOVER + textHeight;
-            ctx.textBaseline = 'top';
-        }
-
-
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-        ctx.strokeStyle = '#666';
-        ctx.lineWidth = 1;
-        ctx.fillRect(tooltipX - 5, tooltipY - textHeight - 5, textWidth + 10, textHeight + 10);
-        ctx.strokeRect(tooltipX - 5, tooltipY - textHeight - 5, textWidth + 10, textHeight + 10);
-
-        ctx.fillStyle = '#333';
-        ctx.fillText(text, tooltipX, tooltipY);
-    }
-
-    // MODIFICADO: Avalia a função objetivo e encontra o ponto ótimo (Max ou Min)
-    function encontrarSolucaoOtima(pontosExtremos, coefXObj, coefYObj, tipoProblema) {
-        let melhorZ = (tipoProblema === 'max') ? -Infinity : Infinity; // Inicializa com valor apropriado
-        let pontoOtimo = null;
-
-        if (pontosExtremos.length === 0) {
-            return { ponto: null, valorZ: null, mensagem: "Não foi encontrada uma região viável." };
-        }
-
-        pontosExtremos.forEach(p => {
-            const z = coefXObj * p.x + coefYObj * p.y;
-            if (tipoProblema === 'max') {
-                if (z > melhorZ) {
-                    melhorZ = z;
-                    pontoOtimo = p;
-                }
-            } else { // Minimização
-                if (z < melhorZ) {
-                    melhorZ = z;
-                    pontoOtimo = p;
-                }
-            }
-        });
-
-        if (pontoOtimo) {
-            const tipoMsg = (tipoProblema === 'max') ? "Máximo" : "Mínimo";
-            return {
-                ponto: pontoOtimo,
-                valorZ: melhorZ,
-                mensagem: `Solução Ótima: Z = ${melhorZ.toFixed(2)} em X = ${pontoOtimo.x.toFixed(2)}, Y = ${pontoOtimo.y.toFixed(2)} (${tipoMsg})`
-            };
-        } else {
-            return { ponto: null, valorZ: null, mensagem: "Não foi possível encontrar uma solução ótima." };
-        }
-    }
-
-
-    // MODIFICADO: Função principal para desenhar o gráfico (redesenha tudo)
-    function desenharGraficoPL() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa o canvas
-
-        const coefXObj = parseFloat(document.getElementById('coefXObjetivo').value);
-        const coefYObj = parseFloat(document.getElementById('coefYObjetivo').value);
-        // NOVO: Obter o tipo de problema
-        const tipoProblema = tipoProblemaObjetivaSelect.value;
-
-
-        const restricoes = [];
-        // Restrições de não-negatividade (x >= 0, y >= 0)
-        restricoes.push({ coefX: 1, coefY: 0, tipo: 'ge', ladoDireito: 0 }); // x >= 0
-        restricoes.push({ coefX: 0, coefY: 1, tipo: 'ge', ladoDireito: 0 }); // y >= 0
-
-        containerRestricoes.querySelectorAll('.restricao-item').forEach(item => {
-            const coefX = parseFloat(item.querySelector('.coef-x').value);
-            const coefY = parseFloat(item.querySelector('.coef-y').value);
-            const tipo = item.querySelector('.tipo-restricao').value;
-            const ladoDireito = parseFloat(item.querySelector('.lado-direito').value);
-            
-            // Validação básica para evitar entradas inválidas
-            if (isNaN(coefX) || isNaN(coefY) || isNaN(ladoDireito) || (coefX === 0 && coefY === 0 && ladoDireito !== 0)) {
-                // Se a restrição é 0x + 0y = D (com D != 0), ela é inválida (0 = D).
-                // Se for 0x + 0y = 0, é redundante. Podemos ignorar ambos ou tratar a inválida.
-                // Por simplicidade, vamos ignorar, mas um alerta ao usuário seria bom em uma app real.
-                console.warn("Restrição inválida ou degenerada ignorada:", { coefX, coefY, tipo, ladoDireito });
-                return; 
-            }
-            restricoes.push({ coefX, coefY, tipo, ladoDireito });
-        });
-
-        calcularEscalaELimites(restricoes);
-
-        const pontosViáveis = calcularERegiaoViável(restricoes);
-        
-        // Se não houver pontos viáveis, não sombreie e avise o usuário
-        if (pontosViáveis.length === 0) {
-            resultadoGraficoDiv.innerHTML = "<p>Não foi encontrada uma região viável. Verifique suas restrições.</p>";
-            desenharEixos(); // Ainda desenha os eixos
-            return; // Sai da função
-        }
-
-        sombrearRegiaoViável(pontosViáveis);
+        // Calcula região viável e ordena
+        pontosViaveis = ordenarPoligono(calcularViavel(restricoes));
         desenharEixos();
 
-        const cores = ['#007bff', '#28a745', '#dc3545', '#ffc107', '#6f42c1', '#17a2b8'];
-        let corIndex = 0;
-        restricoes.forEach((r, index) => {
-            // Desenha as restrições que não são de não-negatividade (x >= 0, y >= 0)
-            // As restrições de não-negatividade são os próprios eixos, que já são desenhados.
-            if (!((r.coefX === 1 && r.coefY === 0 && r.ladoDireito === 0 && r.tipo === 'ge') ||
-                  (r.coefX === 0 && r.coefY === 1 && r.ladoDireito === 0 && r.tipo === 'ge'))) {
-                desenharLinhaRestricao(r, cores[corIndex % cores.length]);
-                corIndex++;
-            }
-        });
-
-        // Desenha os pontos extremos (sem as coordenadas inicialmente)
-        desenharPontosExtremos(pontosViáveis);
-
-        // Se houver um ponto sob o mouse, desenha o tooltip dele
-        if (pontoHover) {
-            desenharTooltip(pontoHover, coefXObj, coefYObj);
-        }
-
-        // MODIFICADO: Passar o tipo de problema para a função de solução ótima
-        const solucaoOtima = encontrarSolucaoOtima(pontosViáveis, coefXObj, coefYObj, tipoProblema);
-        resultadoGraficoDiv.innerHTML = `<p>${solucaoOtima.mensagem}</p>`;
-
-        if (solucaoOtima.ponto) {
-            ctx.fillStyle = 'magenta'; // Cor para o ponto ótimo
-            const px = paraCoordenadaCanvasX(solucaoOtima.ponto.x);
-            const py = paraCoordenadaCanvasY(solucaoOtima.ponto.y);
+        // Sombreamento da região viável
+        if (pontosViaveis.length >= 3) {
+            ctx.fillStyle = 'rgba(0,123,255,0.2)';
             ctx.beginPath();
-            ctx.arc(px, py, 6, 0, 2 * Math.PI); // Desenha um círculo maior para o ponto ótimo
+            ctx.moveTo(CX(pontosViaveis[0].x), CY(pontosViaveis[0].y));
+            pontosViaveis.forEach(p => ctx.lineTo(CX(p.x), CY(p.y)));
+            ctx.closePath();
             ctx.fill();
         }
-    }
 
-    gerarGraficoBtn.addEventListener('click', desenharGraficoPL);
-    // NOVO: Adiciona um listener para redesenhar o gráfico quando o tipo de problema muda
-    tipoProblemaObjetivaSelect.addEventListener('change', desenharGraficoPL);
+        // Desenha restrições (excluindo as de não-negatividade)
+        restricoes.slice(2).forEach((r, i) => desenharRestricao(r, i));
 
-    // --- Lógica do Hover ---
-    canvas.addEventListener('mousemove', (event) => {
-        const rect = canvas.getBoundingClientRect(); // Obtém a posição e tamanho do canvas na tela
-        const mouseX = event.clientX - rect.left; // Posição X do mouse relativa ao canvas
-        const mouseY = event.clientY - rect.top;  // Posição Y do mouse relativa ao canvas
+        desenharPontos(); // desenha os pontos extremos
+        if (pontoHover) desenharTooltip(pontoHover, cxObj, cyObj); // hover
+        const sol = solucaoOtima(pontosViaveis, cxObj, cyObj, tipo);
+        resultadoDiv.innerHTML = sol.mensagem;
+        if (sol.ponto) desenharOtimo(sol.ponto);
+    };
 
-        let pontoSobMouse = null;
+    // Desenha os eixos cartesianos
+    const desenharEixos = () => {
+        ctx.beginPath();
+        ctx.strokeStyle = '#cccccc';
+        ctx.lineWidth = 1.5;
 
-        // Itera sobre todos os pontos extremos para ver se o mouse está sobre algum deles
-        pontosExtremosAtuais.forEach(ponto => {
-            const px = paraCoordenadaCanvasX(ponto.x);
-            const py = paraCoordenadaCanvasY(ponto.y);
+        // Eixo X
+        ctx.moveTo(M, canvas.height - M);
+        ctx.lineTo(canvas.width - M / 2, canvas.height - M);
 
-            // Calcula a distância do mouse para o centro do ponto
-            const distancia = Math.sqrt((mouseX - px)**2 + (mouseY - py)**2);
+        // Eixo Y
+        ctx.moveTo(M, canvas.height - M);
+        ctx.lineTo(M, M / 2);
+        ctx.stroke();
 
-            // Se a distância for menor que o raio de detecção, o mouse está sobre o ponto
-            if (distancia < RAIO_HOVER) {
-                pontoSobMouse = ponto;
-            }
+        ctx.font = '10px Arial';
+        ctx.fillStyle = '#cccccc';
+        ctx.textAlign = 'center';
+        for (let x = 1; x <= maxX; x++) {
+            const px = CX(x);
+            ctx.beginPath();
+            ctx.moveTo(px, canvas.height - M - 3);
+            ctx.lineTo(px, canvas.height - M + 3);
+            ctx.stroke();
+            ctx.fillText(x.toString(), px, canvas.height - M + 12);
+        }
+
+        ctx.textAlign = 'right';
+        for (let y = 1; y <= maxY; y++) {
+            const py = CY(y);
+            ctx.beginPath();
+            ctx.moveTo(M - 3, py);
+            ctx.lineTo(M + 3, py);
+            ctx.stroke();
+            ctx.fillText(y.toString(), M - 8, py + 3);
+        }
+    };
+
+    // Desenha cada restrição (linha de reta)
+    const desenharRestricao = (r, i) => {
+        ctx.strokeStyle = ['#007bff', '#28a745', '#dc3545', '#ffc107'][i % 4];
+        ctx.beginPath();
+        if (r.coefY === 0) {
+            const x = r.ladoDireito / r.coefX;
+            ctx.moveTo(CX(x), CY(0));
+            ctx.lineTo(CX(x), CY(maxY));
+        } else if (r.coefX === 0) {
+            const y = r.ladoDireito / r.coefY;
+            ctx.moveTo(CX(0), CY(y));
+            ctx.lineTo(CX(maxX), CY(y));
+        } else {
+            const y0 = r.ladoDireito / r.coefY;
+            const x0 = r.ladoDireito / r.coefX;
+            ctx.moveTo(CX(0), CY(y0));
+            ctx.lineTo(CX(x0), CY(0));
+        }
+        ctx.stroke();
+    };
+
+    // Desenha todos os pontos extremos calculados
+    const desenharPontos = () => {
+        ctx.fillStyle = '#f5f5f5';
+        pontosViaveis.forEach(p => {
+            ctx.beginPath();
+            ctx.arc(CX(p.x), CY(p.y), 4, 0, 2 * Math.PI);
+            ctx.fill();
         });
+    };
 
-        // Se o ponto sob o mouse mudou, ou se não havia ponto e agora há, redesenha
-        if (pontoSobMouse !== pontoHover) {
-            pontoHover = pontoSobMouse;
-            desenharGraficoPL(); // Redesenha o gráfico para exibir/ocultar o tooltip
-        }
+    // Destaca o ponto ótimo encontrado
+    const desenharOtimo = p => {
+        ctx.fillStyle = 'magenta';
+        ctx.beginPath();
+        ctx.arc(CX(p.x), CY(p.y), 6, 0, 2 * Math.PI);
+        ctx.fill();
+    };
+
+    // Desenha o tooltip de hover sobre o ponto
+    const desenharTooltip = (p, cxObj, cyObj) => {
+        const z = (cxObj * p.x + cyObj * p.y).toFixed(2);
+        const text = `X: ${p.x.toFixed(2)}  Y: ${p.y.toFixed(2)}  Z: ${z}`;
+
+        const px = CX(p.x);
+        const py = CY(p.y);
+        ctx.font = '12px Arial';
+        const metrics = ctx.measureText(text);
+        const w = metrics.width + 10;
+        const h = 20;
+
+        let tx = px + 10, ty = py - 10;
+        if (tx + w > canvas.width) tx = px - w - 10;
+        if (ty - h < 0) ty = py + 10;
+
+        ctx.fillStyle = 'white';
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 1;
+        ctx.fillRect(tx, ty - h, w, h);
+        ctx.strokeRect(tx, ty - h, w, h);
+
+        ctx.fillStyle = '#000';
+        ctx.textAlign = 'left';
+        ctx.fillText(text, tx + 5, ty - 5);
+    };
+
+    // --- Eventos principais ---
+
+    // Botão de gerar gráfico
+    btnGerar.onclick = desenhar;
+    tipoProblemaSelect.onchange = desenhar;
+
+    // Evento hover no canvas
+    canvas.addEventListener('mousemove', e => {
+        const rect = canvas.getBoundingClientRect();
+        const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+        pontoHover = pontosViaveis.find(p => {
+            const dx = CX(p.x) - mx, dy = CY(p.y) - my;
+            return Math.hypot(dx, dy) < 8;
+        });
+        desenhar();
     });
 
-    // Quando o mouse sai do canvas, garante que o tooltip seja removido
+    // Remove hover quando sai do canvas
     canvas.addEventListener('mouseout', () => {
-        if (pontoHover) {
-            pontoHover = null;
-            desenharGraficoPL(); // Redesenha para limpar o tooltip
-        }
+        pontoHover = null;
+        desenhar();
     });
 
-    // Inicializa a numeracao das restrições e o gráfico ao carregar a página
-    atualizarNumeracaoRestricoes();
-    desenharGraficoPL();
+    // Inicialização automática ao carregar
+    addRestricao();
+    desenhar();
 });

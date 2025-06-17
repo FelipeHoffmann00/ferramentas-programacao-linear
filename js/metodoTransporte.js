@@ -1,308 +1,215 @@
 document.addEventListener('DOMContentLoaded', () => {
+
+    // Referências aos containers de entrada e saída
     const entradaCantoNoroesteDiv = document.getElementById('entradaCantoNoroeste');
     const saidaCantoNoroesteDiv = document.getElementById('saidaCantoNoroeste');
     const entradaMenorCustoDiv = document.getElementById('entradaMenorCusto');
     const saidaMenorCustoDiv = document.getElementById('saidaMenorCusto');
 
-    // Funções para renderizar inputs de transporte (fontes/destinos)
-    function renderizarEntradasTransporte(targetDiv, metodo) {
-        const numFontesInputId = `numFontes${metodo === 'noroeste' ? 'Noroeste' : 'MenorCusto'}`;
-        const numDestinosInputId = `numDestinos${metodo === 'noroeste' ? 'Noroeste' : 'MenorCusto'}`;
-        const criarMatrizBtnId = `criarMatrizTransporte${metodo === 'noroeste' ? 'Noroeste' : 'MenorCusto'}`;
-        const camposMatrizContainerId = `campos${metodo === 'noroeste' ? 'CantoNoroeste' : 'MenorCusto'}`;
+    // Função genérica para montar o bloco de input de transporte
+    function criarInterfaceTransporte(container, metodo) {
+        const prefixo = metodo === 'noroeste' ? 'Noroeste' : 'MenorCusto';
 
-        const configHtml = `
+        // Geração do HTML inicial com inputs de número de fontes e destinos
+        container.innerHTML = `
             <div class="config-transporte">
-                <div class="config-item-transporte">
-                    <label for="${numFontesInputId}">Número de Fontes:</label>
-                    <input type="number" id="${numFontesInputId}" min="1" value="2">
-                </div>
-                <div class="config-item-transporte">
-                    <label for="${numDestinosInputId}">Número de Destinos:</label>
-                    <input type="number" id="${numDestinosInputId}" min="1" value="2">
-                </div>
-                <button id="${criarMatrizBtnId}">Criar Matriz</button>
+                <label>Fontes:</label>
+                <input type="number" id="numFontes${prefixo}" value="2" min="1">
+                <label>Destinos:</label>
+                <input type="number" id="numDestinos${prefixo}" value="2" min="1">
+                <button id="criarMatriz${prefixo}">Criar Matriz</button>
             </div>
-            <div class="matriz-transporte-campos" id="${camposMatrizContainerId}">
-                </div>
+            <div class="matriz-container" id="matrizCampos${prefixo}"></div>
         `;
-        targetDiv.innerHTML = configHtml;
 
-        document.getElementById(criarMatrizBtnId).addEventListener('click', (event) => {
-            const currentNumFontes = parseInt(document.getElementById(numFontesInputId).value);
-            const currentNumDestinos = parseInt(document.getElementById(numDestinosInputId).value);
-            criarMatrizTransporte(currentNumFontes, currentNumDestinos, camposMatrizContainerId, metodo);
+        // Adiciona listener ao botão "Criar Matriz"
+        document.getElementById(`criarMatriz${prefixo}`).addEventListener('click', () => {
+            const numFontes = parseInt(document.getElementById(`numFontes${prefixo}`).value);
+            const numDestinos = parseInt(document.getElementById(`numDestinos${prefixo}`).value);
+            criarMatriz(numFontes, numDestinos, `matrizCampos${prefixo}`, metodo);
         });
 
-        const defaultNumFontes = parseInt(document.getElementById(numFontesInputId).value);
-        const defaultNumDestinos = parseInt(document.getElementById(numDestinosInputId).value);
-        criarMatrizTransporte(defaultNumFontes, defaultNumDestinos, camposMatrizContainerId, metodo);
+        // Cria uma matriz inicial ao carregar
+        criarMatriz(2, 2, `matrizCampos${prefixo}`, metodo);
     }
 
-    // Função para criar a matriz de custos, oferta e demanda
-    function criarMatrizTransporte(numFontes, numDestinos, camposMatrizContainerId, metodo) {
-        if (isNaN(numFontes) || numFontes < 1 || isNaN(numDestinos) || numDestinos < 1) {
-            alert('Por favor, insira um número válido para fontes e destinos (mín. 1).');
-            return;
-        }
+    // Função para montar dinamicamente a matriz de inputs (custos, oferta, demanda)
+    function criarMatriz(numFontes, numDestinos, containerId, metodo) {
+        const container = document.getElementById(containerId);
+        let html = '<h4>Matriz de Custos</h4><table><thead><tr><th></th>';
 
-        const camposMatrizContainer = document.getElementById(camposMatrizContainerId);
-        let matrizHtml = '<h4>Matriz de Custos</h4><table>';
-        matrizHtml += '<thead><tr><th></th>';
-        for (let j = 0; j < numDestinos; j++) {
-            matrizHtml += `<th>D${j + 1}</th>`;
-        }
-        matrizHtml += `<th>Oferta</th></tr></thead><tbody>`;
+        // Cabeçalho (Destinos)
+        for (let j = 0; j < numDestinos; j++)
+            html += `<th>D${j+1}</th>`;
+        html += '<th>Oferta</th></tr></thead><tbody>';
 
+        // Linhas de fontes com inputs
         for (let i = 0; i < numFontes; i++) {
-            matrizHtml += `<tr><th>F${i + 1}</th>`;
+            html += `<tr><th>F${i+1}</th>`;
             for (let j = 0; j < numDestinos; j++) {
-                matrizHtml += `<td><input type="number" class="custo-celula" data-fonte="${i}" data-dest="${j}" value="10" min="0"></td>`;
+                html += `<td><input type="number" class="custo" data-i="${i}" data-j="${j}" value="10" min="0"></td>`;
             }
-            matrizHtml += `<td><input type="number" class="oferta-celula" data-fonte="${i}" value="100" min="0"></td></tr>`;
+            html += `<td><input type="number" class="oferta" data-i="${i}" value="100" min="0"></td></tr>`;
         }
 
-        matrizHtml += `<tr><th>Demanda</th>`;
+        // Linha de demanda
+        html += '<tr><th>Demanda</th>';
         for (let j = 0; j < numDestinos; j++) {
-            matrizHtml += `<td><input type="number" class="demanda-celula" data-dest="${j}" value="80" min="0"></td>`;
+            html += `<td><input type="number" class="demanda" data-j="${j}" value="80" min="0"></td>`;
         }
-        matrizHtml += `<td></td></tr></tbody></table>`;
+        html += '<td></td></tr></tbody></table>';
 
-        matrizHtml += `<div class="botoes-transporte">`;
-        if (metodo === 'noroeste') {
-            matrizHtml += `<button id="executarCantoNoroeste">Executar Canto Noroeste</button>`;
-        } else {
-            matrizHtml += `<button id="executarMenorCusto">Executar Menor Custo</button>`;
-        }
-        matrizHtml += `</div>`;
+        // Botão de execução do método
+        html += `<button id="executar${metodo}">Executar ${metodo === 'noroeste' ? 'Canto Noroeste' : 'Menor Custo'}</button>`;
+        container.innerHTML = html;
 
-        camposMatrizContainer.innerHTML = matrizHtml;
-
-        // Adiciona listeners para os botões de execução APÓS a criação
-        if (metodo === 'noroeste') {
-            // Adicionado console.log para depuração do listener
-            const btnNoroeste = document.getElementById('executarCantoNoroeste');
-            if (btnNoroeste) {
-                btnNoroeste.addEventListener('click', () => {
-                    console.log("DEBUG_TRANSPORTE: Botão 'Executar Canto Noroeste' clicado."); // DEBUG
-                    runTransportationMethod(camposMatrizContainerId, metodo);
-                });
-            } else {
-                console.error("DEBUG_TRANSPORTE: Botão 'executarCantoNoroeste' não encontrado!"); // DEBUG
-            }
-        } else {
-            const btnMenorCusto = document.getElementById('executarMenorCusto');
-            if (btnMenorCusto) {
-                btnMenorCusto.addEventListener('click', () => {
-                    console.log("DEBUG_TRANSPORTE: Botão 'Executar Menor Custo' clicado."); // DEBUG
-                    runTransportationMethod(camposMatrizContainerId, metodo);
-                });
-            } else {
-                console.error("DEBUG_TRANSPORTE: Botão 'executarMenorCusto' não encontrado!"); // DEBUG
-            }
-        }
+        // Adiciona listener ao botão de execução
+        document.getElementById(`executar${metodo}`).addEventListener('click', () => {
+            executarTransporte(containerId, metodo);
+        });
     }
 
-    // Função para coletar os dados da matriz
-    function getTransportationData(camposMatrizContainerId) {
-        console.log("DEBUG_TRANSPORTE: Coletando dados de transporte..."); // DEBUG
-        const container = document.getElementById(camposMatrizContainerId);
-        if (!container) {
-            console.error("DEBUG_TRANSPORTE: Container de campos da matriz não encontrado:", camposMatrizContainerId); // DEBUG
-            return null; // Retorna null se o container não for encontrado
-        }
-
-        const custosInputs = container.querySelectorAll('.custo-celula');
-        const ofertaInputs = container.querySelectorAll('.oferta-celula');
-        const demandaInputs = container.querySelectorAll('.demanda-celula');
-
-        const numFontes = ofertaInputs.length;
-        const numDestinos = demandaInputs.length;
-
+    // Coleta os dados da matriz preenchida
+    function obterDados(containerId) {
+        const container = document.getElementById(containerId);
         const custos = [];
+        const oferta = [];
+        const demanda = [];
+
+        const numFontes = container.querySelectorAll('.oferta').length;
+        const numDestinos = container.querySelectorAll('.demanda').length;
+
+        // Coletar custos
         for (let i = 0; i < numFontes; i++) {
-            // ERRO AQUI: costs.push([]) deveria ser custos.push([])
-            custos.push([]); // Inicializa a sub-array para a fonte 'i'
+            custos[i] = [];
             for (let j = 0; j < numDestinos; j++) {
-                const input = container.querySelector(`.custo-celula[data-fonte="${i}"][data-dest="${j}"]`);
-                // Adicione uma verificação de NaN aqui
-                const valor = parseFloat(input.value);
-                if (isNaN(valor)) {
-                    console.error(`DEBUG_TRANSPORTE: Valor inválido para custo na Fonte ${i+1}, Destino ${j+1}.`); // DEBUG
-                    // Pode retornar null ou lançar um erro
-                    return null;
-                }
-                custos[i].push(valor);
+                const input = container.querySelector(`.custo[data-i="${i}"][data-j="${j}"]`);
+                const val = parseFloat(input.value);
+                if (isNaN(val)) return null;
+                custos[i][j] = val;
             }
         }
 
-        const oferta = Array.from(ofertaInputs).map(input => {
-            const valor = parseFloat(input.value);
-            if (isNaN(valor)) {
-                console.error(`DEBUG_TRANSPORTE: Valor inválido para oferta da Fonte ${input.dataset.fonte}.`); // DEBUG
-                return NaN; // Marcar como NaN para a verificação de erro
-            }
-            return valor;
-        });
-        const demanda = Array.from(demandaInputs).map(input => {
-            const valor = parseFloat(input.value);
-            if (isNaN(valor)) {
-                console.error(`DEBUG_TRANSPORTE: Valor inválido para demanda do Destino ${input.dataset.dest}.`); // DEBUG
-                return NaN; // Marcar como NaN para a verificação de erro
-            }
-            return valor;
+        // Coletar oferta
+        container.querySelectorAll('.oferta').forEach(input => {
+            const val = parseFloat(input.value);
+            if (isNaN(val)) return null;
+            oferta.push(val);
         });
 
-        // Verifique se algum NaN foi retornado
-        if (oferta.includes(NaN) || demanda.includes(NaN) || custos.some(row => row.includes(NaN))) {
-            alert("Por favor, insira apenas valores numéricos válidos em todos os campos.");
-            return null;
-        }
+        // Coletar demanda
+        container.querySelectorAll('.demanda').forEach(input => {
+            const val = parseFloat(input.value);
+            if (isNaN(val)) return null;
+            demanda.push(val);
+        });
 
-        console.log("DEBUG_TRANSPORTE: Dados coletados - Custos:", custos, "Oferta:", oferta, "Demanda:", demanda); // DEBUG
         return { custos, oferta, demanda, numFontes, numDestinos };
     }
 
-    // Função unificada para executar o método de transporte (Canto Noroeste ou Menor Custo)
-    function runTransportationMethod(camposMatrizContainerId, metodo) {
-        console.log(`DEBUG_TRANSPORTE: Executando método ${metodo}...`); // DEBUG
-        const data = getTransportationData(camposMatrizContainerId);
-        if (!data) { // Se a coleta de dados falhou (retornou null)
-            console.error("DEBUG_TRANSPORTE: Coleta de dados falhou, abortando execução."); // DEBUG
-            return;
-        }
-        const { custos, oferta, demanda, numFontes, numDestinos } = data;
-        
-        const saidaDiv = metodo === 'noroeste' ? saidaCantoNoroesteDiv : saidaMenorCustoDiv;
-
-        const totalOferta = oferta.reduce((sum, val) => sum + val, 0);
-        const totalDemanda = demanda.reduce((sum, val) => sum + val, 0);
-        console.log(`DEBUG_TRANSPORTE: Oferta Total: ${totalOferta}, Demanda Total: ${totalDemanda}`); // DEBUG
-
-        if (Math.abs(totalOferta - totalDemanda) > 1e-9) {
-            saidaDiv.innerHTML = `<p class="erro">Erro: O problema não está balanceado! Oferta Total (${totalOferta}) ≠ Demanda Total (${totalDemanda}).</p>`;
-            console.error("DEBUG_TRANSPORTE: Problema não balanceado."); // DEBUG
+    // Função unificada de execução
+    function executarTransporte(containerId, metodo) {
+        const dados = obterDados(containerId);
+        if (!dados) {
+            alert("Preencha todos os campos corretamente.");
             return;
         }
 
-        let alocacoes; // Matriz de alocações (x_ij)
-        let custoTotal = 0;
+        const { custos, oferta, demanda, numFontes, numDestinos } = dados;
+
+        // Balanceamento (validação básica)
+        const totalOferta = oferta.reduce((a, b) => a + b, 0);
+        const totalDemanda = demanda.reduce((a, b) => a + b, 0);
+        if (totalOferta !== totalDemanda) {
+            alert(`Oferta (${totalOferta}) e Demanda (${totalDemanda}) não estão balanceadas.`);
+            return;
+        }
+
+        let alocacao, custoTotal;
 
         if (metodo === 'noroeste') {
-            console.log("DEBUG_TRANSPORTE: Chamando metodoCantoNoroeste..."); // DEBUG
-            alocacoes = metodoCantoNoroeste(custos, oferta, demanda, numFontes, numDestinos);
-            custoTotal = calcularCustoTotal(alocacoes, custos, numFontes, numDestinos);
-            saidaDiv.innerHTML = `
-                <h4>Resultados do Método do Canto Noroeste</h4>
-                ${formatarTabelaAlocacoes(alocacoes, numFontes, numDestinos)}
-                <p>Custo Total: <strong>${custoTotal.toFixed(2)}</strong></p>
-            `;
-            console.log("DEBUG_TRANSPORTE: Método Canto Noroeste concluído. Custo:", custoTotal); // DEBUG
-        } else { // Menor Custo
-            console.log("DEBUG_TRANSPORTE: Chamando metodoMenorCusto..."); // DEBUG
-            alocacoes = metodoMenorCusto(custos, oferta, demanda, numFontes, numDestinos);
-            custoTotal = calcularCustoTotal(alocacoes, custos, numFontes, numDestinos);
-            saidaDiv.innerHTML = `
-                <h4>Resultados do Método do Menor Custo</h4>
-                ${formatarTabelaAlocacoes(alocacoes, numFontes, numDestinos)}
-                <p>Custo Total: <strong>${custoTotal.toFixed(2)}</strong></p>
-            `;
-            console.log("DEBUG_TRANSPORTE: Método Menor Custo concluído. Custo:", custoTotal); // DEBUG
+            alocacao = cantoNoroeste(custos, oferta, demanda, numFontes, numDestinos);
+        } else {
+            alocacao = menorCusto(custos, oferta, demanda, numFontes, numDestinos);
         }
+
+        custoTotal = calcularCusto(alocacao, custos);
+        mostrarResultado(alocacao, metodo, custoTotal, numFontes, numDestinos);
     }
 
-    // --- Algoritmos do Método de Transporte ---
+    // Algoritmo do Canto Noroeste
+    function cantoNoroeste(custos, ofertaIn, demandaIn, linhas, colunas) {
+        const oferta = [...ofertaIn];
+        const demanda = [...demandaIn];
+        const aloc = Array.from({ length: linhas }, () => Array(colunas).fill(0));
 
-    function metodoCantoNoroeste(custos, ofertaOriginal, demandaOriginal, numFontes, numDestinos) {
-        console.log("DEBUG_TRANSPORTE: Dentro de metodoCantoNoroeste."); // DEBUG
-        const oferta = [...ofertaOriginal];
-        const demanda = [...demandaOriginal];
-        const alocacoes = Array.from({ length: numFontes }, () => Array(numDestinos).fill(0));
+        let i = 0, j = 0;
+        while (i < linhas && j < colunas) {
+            const alocar = Math.min(oferta[i], demanda[j]);
+            aloc[i][j] = alocar;
+            oferta[i] -= alocar;
+            demanda[j] -= alocar;
 
-        let i = 0; // Índice da fonte (linha)
-        let j = 0; // Índice do destino (coluna)
-
-        while (i < numFontes && j < numDestinos) {
-            const quantidadeAlocada = Math.min(oferta[i], demanda[j]);
-            alocacoes[i][j] = quantidadeAlocada;
-
-            oferta[i] -= quantidadeAlocada;
-            demanda[j] -= quantidadeAlocada;
-
-            console.log(`DEBUG_TRANSPORTE: CN - Alocado ${quantidadeAlocada} de F${i+1} para D${j+1}. Oferta F${i+1}: ${oferta[i]}, Demanda D${j+1}: ${demanda[j]}`); // DEBUG
-
-            if (oferta[i] === 0) {
-                i++;
-            }
-            if (demanda[j] === 0) {
-                j++;
-            }
+            if (oferta[i] === 0) i++;
+            if (demanda[j] === 0) j++;
         }
-        return alocacoes;
+        return aloc;
     }
 
-    function metodoMenorCusto(custosOriginal, ofertaOriginal, demandaOriginal, numFontes, numDestinos) {
-        console.log("DEBUG_TRANSPORTE: Dentro de metodoMenorCusto."); // DEBUG
-        const custos = custosOriginal.map(row => [...row]);
-        const oferta = [...ofertaOriginal];
-        const demanda = [...demandaOriginal];
-        const alocacoes = Array.from({ length: numFontes }, () => Array(numDestinos).fill(0));
+    // Algoritmo do Menor Custo
+    function menorCusto(custosIn, ofertaIn, demandaIn, linhas, colunas) {
+        const oferta = [...ofertaIn];
+        const demanda = [...demandaIn];
+        const custos = custosIn.map(row => [...row]);
+        const aloc = Array.from({ length: linhas }, () => Array(colunas).fill(0));
 
         const celulas = [];
-        for (let i = 0; i < numFontes; i++) {
-            for (let j = 0; j < numDestinos; j++) {
-                celulas.push({ fonte: i, destino: j, custo: custos[i][j] });
-            }
-        }
+        for (let i = 0; i < linhas; i++)
+            for (let j = 0; j < colunas; j++)
+                celulas.push({ i, j, custo: custos[i][j] });
 
         celulas.sort((a, b) => a.custo - b.custo);
 
-        for (const celula of celulas) {
-            const { fonte: i, destino: j } = celula;
-
+        for (const { i, j } of celulas) {
             if (oferta[i] > 0 && demanda[j] > 0) {
-                const quantidadeAlocada = Math.min(oferta[i], demanda[j]);
-                alocacoes[i][j] = quantidadeAlocada;
-
-                oferta[i] -= quantidadeAlocada;
-                demanda[j] -= quantidadeAlocada;
-                console.log(`DEBUG_TRANSPORTE: MC - Alocado ${quantidadeAlocada} de F${i+1} para D${j+1} (Custo ${celula.custo}). Oferta F${i+1}: ${oferta[i]}, Demanda D${j+1}: ${demanda[j]}`); // DEBUG
+                const alocar = Math.min(oferta[i], demanda[j]);
+                aloc[i][j] = alocar;
+                oferta[i] -= alocar;
+                demanda[j] -= alocar;
             }
         }
-        return alocacoes;
+        return aloc;
     }
 
-    function calcularCustoTotal(alocacoes, custos, numFontes, numDestinos) {
-        console.log("DEBUG_TRANSPORTE: Calculando custo total..."); // DEBUG
-        let custoTotal = 0;
-        for (let i = 0; i < numFontes; i++) {
-            for (let j = 0; j < numDestinos; j++) {
-                custoTotal += alocacoes[i][j] * custos[i][j];
-            }
-        }
-        return custoTotal;
+    // Calcula o custo total da solução
+    function calcularCusto(aloc, custos) {
+        let total = 0;
+        for (let i = 0; i < aloc.length; i++)
+            for (let j = 0; j < aloc[0].length; j++)
+                total += aloc[i][j] * custos[i][j];
+        return total;
     }
 
-    function formatarTabelaAlocacoes(alocacoes, numFontes, numDestinos) {
-        console.log("DEBUG_TRANSPORTE: Formatando tabela de alocações para HTML."); // DEBUG
-        let html = '<table class="tabela-alocacoes"><thead><tr><th></th>';
-        for (let j = 0; j < numDestinos; j++) {
-            html += `<th>D${j + 1}</th>`;
+    // Exibição dos resultados na tela
+    function mostrarResultado(aloc, metodo, custo, linhas, colunas) {
+        const divSaida = metodo === 'noroeste' ? saidaCantoNoroesteDiv : saidaMenorCustoDiv;
+        let html = `<h4>Resultado - ${metodo === 'noroeste' ? 'Canto Noroeste' : 'Menor Custo'}</h4>`;
+        html += '<table><thead><tr><th></th>';
+        for (let j = 0; j < colunas; j++)
+            html += `<th>D${j+1}</th>`;
+        html += '</tr></thead><tbody>';
+        for (let i = 0; i < linhas; i++) {
+            html += `<tr><th>F${i+1}</th>`;
+            for (let j = 0; j < colunas; j++)
+                html += `<td>${aloc[i][j]}</td>`;
+            html += '</tr>';
         }
-        html += `</tr></thead><tbody>`;
-
-        for (let i = 0; i < numFontes; i++) {
-            html += `<tr><th>F${i + 1}</th>`;
-            for (let j = 0; j < numDestinos; j++) {
-                html += `<td>${alocacoes[i][j]}</td>`;
-            }
-            html += `</tr>`;
-        }
-        html += `</tbody></table>`;
-        return html;
+        html += '</tbody></table>';
+        html += `<p><strong>Custo Total: ${custo.toFixed(2)}</strong></p>`;
+        divSaida.innerHTML = html;
     }
 
-
-    renderizarEntradasTransporte(entradaCantoNoroesteDiv, 'noroeste');
-    renderizarEntradasTransporte(entradaMenorCustoDiv, 'menorCusto');
+    // Inicialização: renderiza as interfaces dos dois métodos
+    criarInterfaceTransporte(entradaCantoNoroesteDiv, 'noroeste');
+    criarInterfaceTransporte(entradaMenorCustoDiv, 'menorCusto');
 });
